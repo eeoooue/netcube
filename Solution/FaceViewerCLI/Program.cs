@@ -1,45 +1,36 @@
-﻿using System.IO;
-using System.Net.Http;
-using System.Net.Sockets;
-using System.Text;
-using FaceViewerCLI.GetCubeStrategies;
-using FaceViewerCLI.PerformMoveStrategies;
+﻿namespace FaceViewerCLI;
+using LibCubeIntegration.GetCubeStrategies;
+using LibCubeIntegration.PerformMoveStrategies;
 using LibNetCube;
 
-namespace FaceViewerCLI
+class Program
 {
-    internal class Program
+    static readonly FacePresenter Presenter = new();
+    static CubeState _cubeState = new(new CubePuzzle().GetState());
+
+    static readonly IPerformMoveStrategy PerformMoveStrategy = new MoveViaApiStrategy();
+    static readonly IGetCubeStrategy GetCubeStrategy = new GetCubeViaApiStrategy();
+
+    static void Main()
     {
-        private static FacePresenter Presenter = new FacePresenter();
-        private static CubeState CubeState = new CubeState(new CubePuzzle().GetState());
-
-        private static IPerformMoveStrategy PerformMoveStrategy = new MoveViaAPIStrategy();
-        private static IGetCubeStrategy GetCubeStrategy = new GetCubeViaAPIStrategy();
-
-        static void Main(string[] args)
+        while (true)
         {
-            while (true)
+            if (GetCubeStrategy.GetCube() is { } state)
             {
-                if (GetCubeStrategy.GetCube() is CubeState state)
-                {
-                    CubeState = state;
-                }
-                else
-                {
-                    Console.WriteLine("Lost connection to server.");
-                    Thread.Sleep(500);
-                    Console.WriteLine("Attempting to reconnect...");
-                    continue;
-                }
-
-                Presenter.PresentCube(CubeState);
-
-                Console.WriteLine("Enter a move to be performed...");
-                if (Console.ReadLine() is string message)
-                {
-                    PerformMoveStrategy.PerformMove(message);
-                }
+                _cubeState = state;
             }
+            else
+            {
+                Console.WriteLine("Lost connection to server.");
+                Thread.Sleep(500);
+                Console.WriteLine("Attempting to reconnect...");
+                continue;
+            }
+
+            Presenter.PresentCube(_cubeState);
+
+            Console.WriteLine("Enter a move to be performed...");
+            if (Console.ReadLine() is { } message) PerformMoveStrategy.PerformMove(message);
         }
     }
 }
